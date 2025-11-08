@@ -29,25 +29,34 @@ class DatabaseComparison {
         return this.formatStatistics(syntheaStats);
       }
 
-      // Fallback to FHIR server query
+      // Fallback to FHIR server query (with timeout protection)
       console.log('Synthea files not found, querying FHIR server...');
-      const observations = await this.queryFHIRObservations();
-      const fhirStats = this.calculateStatistics(observations);
-      
-      // Check if FHIR has data
-      const hasFhirData = Object.keys(fhirStats).some(key => 
-        fhirStats[key].count > 0
-      );
+      try {
+        const observations = await Promise.race([
+          this.queryFHIRObservations(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('FHIR query timeout')), 5000)
+          )
+        ]);
+        const fhirStats = this.calculateStatistics(observations);
+        
+        // Check if FHIR has data
+        const hasFhirData = Object.keys(fhirStats).some(key => 
+          fhirStats[key].count > 0
+        );
 
-      if (hasFhirData) {
-        return fhirStats;
+        if (hasFhirData) {
+          return fhirStats;
+        }
+      } catch (fhirError) {
+        console.warn('FHIR server query failed or timed out:', fhirError.message);
       }
 
       // Final fallback to defaults
       console.warn('No Synthea data found, using default statistics');
       return this.getDefaultStatistics();
     } catch (error) {
-      console.error('Error fetching database statistics:', error);
+      console.error('Error fetching database statistics:', error.message);
       // Return default/fallback statistics if database is unavailable
       return this.getDefaultStatistics();
     }
@@ -102,46 +111,58 @@ class DatabaseComparison {
    */
   async queryFHIRObservations() {
     try {
-      // Query for blood pressure observations
-      const bpResponse = await axios.get(`${FHIR_SERVER_URL}/Observation`, {
+      // Set a short timeout to avoid hanging if FHIR server is not available
+      const axiosConfig = {
+        timeout: 3000, // 3 second timeout
         params: {
-          code: '85354-9', // Blood pressure panel
           _count: 1000
         }
-      });
+      };
+
+      // Query for blood pressure observations
+      const bpResponse = await axios.get(`${FHIR_SERVER_URL}/Observation`, {
+        ...axiosConfig,
+        params: {
+          ...axiosConfig.params,
+          code: '85354-9' // Blood pressure panel
+        }
+      }).catch(() => ({ data: { entry: [] } }));
 
       // Query for cholesterol observations
       const cholResponse = await axios.get(`${FHIR_SERVER_URL}/Observation`, {
+        ...axiosConfig,
         params: {
-          code: '2093-3', // Total cholesterol
-          _count: 1000
+          ...axiosConfig.params,
+          code: '2093-3' // Total cholesterol
         }
-      });
+      }).catch(() => ({ data: { entry: [] } }));
 
       // Query for HDL observations
       const hdlResponse = await axios.get(`${FHIR_SERVER_URL}/Observation`, {
+        ...axiosConfig,
         params: {
-          code: '2085-9', // HDL cholesterol
-          _count: 1000
+          ...axiosConfig.params,
+          code: '2085-9' // HDL cholesterol
         }
-      });
+      }).catch(() => ({ data: { entry: [] } }));
 
       // Query for BMI observations
       const bmiResponse = await axios.get(`${FHIR_SERVER_URL}/Observation`, {
+        ...axiosConfig,
         params: {
-          code: '39156-5', // BMI
-          _count: 1000
+          ...axiosConfig.params,
+          code: '39156-5' // BMI
         }
-      });
+      }).catch(() => ({ data: { entry: [] } }));
 
       return {
-        bloodPressure: bpResponse.data.entry || [],
-        cholesterol: cholResponse.data.entry || [],
-        hdl: hdlResponse.data.entry || [],
-        bmi: bmiResponse.data.entry || []
+        bloodPressure: bpResponse.data?.entry || [],
+        cholesterol: cholResponse.data?.entry || [],
+        hdl: hdlResponse.data?.entry || [],
+        bmi: bmiResponse.data?.entry || []
       };
     } catch (error) {
-      console.error('Error querying FHIR for observations:', error);
+      console.error('Error querying FHIR for observations:', error.message);
       return {
         bloodPressure: [],
         cholesterol: [],
