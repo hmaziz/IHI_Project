@@ -81,7 +81,7 @@ const RiskResults = ({ riskAssessment, recommendations, patientData, onBack }) =
           <div className="models-card">
             <h3>Risk Model Analysis</h3>
             <div className="models-grid">
-              {riskAssessment.models.framingham && (
+              {riskAssessment.models.framingham ? (
                 <div className="model-item">
                   <h4>Framingham Risk Score</h4>
                   <div className="model-risk">
@@ -90,12 +90,24 @@ const RiskResults = ({ riskAssessment, recommendations, patientData, onBack }) =
                     </span>
                     <span className="model-label">10-Year Risk</span>
                   </div>
+                  {riskAssessment.models.framingham.score !== undefined && (
+                    <div className="model-score">
+                      <span>Points: {riskAssessment.models.framingham.score}</span>
+                    </div>
+                  )}
                   <p className="model-description">
                     Based on the Framingham Heart Study prediction model
                   </p>
                 </div>
+              ) : (
+                <div className="model-item model-unavailable">
+                  <h4>Framingham Risk Score</h4>
+                  <p className="model-unavailable-text">
+                    Not available. Framingham risk calculation requires age between 30-74 years and complete data (blood pressure, cholesterol, HDL cholesterol).
+                  </p>
+                </div>
               )}
-              {riskAssessment.models.prevent && (
+              {riskAssessment.models.prevent ? (
                 <div className="model-item">
                   <h4>AHA PREVENT Model</h4>
                   <div className="model-risk">
@@ -112,6 +124,13 @@ const RiskResults = ({ riskAssessment, recommendations, patientData, onBack }) =
                   )}
                   <p className="model-description">
                     Based on the American Heart Association PREVENT equations
+                  </p>
+                </div>
+              ) : (
+                <div className="model-item model-unavailable">
+                  <h4>AHA PREVENT Model</h4>
+                  <p className="model-unavailable-text">
+                    Not available. PREVENT model calculation requires complete patient data.
                   </p>
                 </div>
               )}

@@ -391,6 +391,28 @@
   line-height: 1.6;
 }
 
+.model-unavailable {
+  border-left-color: #95a5a6;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  opacity: 0.8;
+}
+
+.model-unavailable-text {
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.model-score {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #dee2e6;
+  font-size: 0.9rem;
+  color: #666;
+}
+
 /* Comparison Card */
 .comparison-card {
   background: white;
