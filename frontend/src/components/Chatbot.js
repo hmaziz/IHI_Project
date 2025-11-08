@@ -93,12 +93,24 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
         patientData: collectedData
       });
 
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         onRiskCalculated(response.data.riskAssessment, response.data.recommendations);
+      } else {
+        console.error('Unexpected response format:', response.data);
+        alert('Failed to calculate risk. Unexpected response from server.');
       }
     } catch (error) {
       console.error('Error calculating risk:', error);
-      alert('Failed to calculate risk. Please try again.');
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        alert(`Failed to calculate risk: ${error.response.data?.message || error.response.data?.error || 'Server error'}`);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        alert('Failed to calculate risk. Please make sure the backend server is running on port 5000.');
+      } else {
+        console.error('Error setting up request:', error.message);
+        alert(`Failed to calculate risk: ${error.message}`);
+      }
     } finally {
       setIsLoading(false);
     }
