@@ -61,7 +61,7 @@ router.post('/message', async (req, res) => {
     let recommendations = null;
 
     if (hasEnoughData && context.currentPhase === 'data_collection') {
-      riskAssessment = riskCalculator.calculateRisk(context.collectedData);
+      riskAssessment = await riskCalculator.calculateRisk(context.collectedData, false);
       recommendations = riskCalculator.generateRecommendations(riskAssessment, context.collectedData);
       context.currentPhase = 'results';
     }
@@ -110,7 +110,7 @@ router.post('/start', (req, res) => {
  * POST /api/chatbot/calculate-risk
  * Calculate risk based on collected data
  */
-router.post('/calculate-risk', (req, res) => {
+router.post('/calculate-risk', async (req, res) => {
   try {
     const { patientData } = req.body;
 
@@ -118,7 +118,7 @@ router.post('/calculate-risk', (req, res) => {
       return res.status(400).json({ error: 'Patient data is required' });
     }
 
-    const riskAssessment = riskCalculator.calculateRisk(patientData);
+    const riskAssessment = await riskCalculator.calculateRisk(patientData, false);
     const recommendations = riskCalculator.generateRecommendations(riskAssessment, patientData);
 
     res.json({

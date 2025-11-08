@@ -108,6 +108,25 @@ const Questionnaire = ({ onComplete, onBack }) => {
         }
       });
 
+      // Store data in FHIR
+      try {
+        const fhirResponse = await axios.post('/api/fhir/questionnaire', patientData);
+        if (fhirResponse.data.success) {
+          console.log('Questionnaire data stored in FHIR:', fhirResponse.data);
+          // Store FHIR patient ID if available
+          if (fhirResponse.data.results?.patientId) {
+            patientData.fhirPatientId = fhirResponse.data.results.patientId;
+          }
+        }
+      } catch (fhirError) {
+        console.error('Error storing data in FHIR:', fhirError);
+        // Continue with the flow even if FHIR storage fails
+        // You might want to show a warning to the user
+        if (fhirError.response) {
+          console.error('FHIR Error details:', fhirError.response.data);
+        }
+      }
+
       onComplete(patientData);
     } catch (error) {
       console.error('Error submitting form:', error);

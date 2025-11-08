@@ -1,15 +1,100 @@
 /**
  * Heart Disease Risk Assessment Calculator
- * Based on Framingham Risk Score and other validated cardiovascular risk factors
+ * Combines Framingham Risk Score and AHA PREVENT model
+ * Includes database comparison with Synthea data
  */
+
+const framinghamRiskScore = require('./framinghamRiskScore');
+const preventModel = require('./preventModel');
+const databaseComparison = require('./databaseComparison');
 
 class RiskCalculator {
   /**
-   * Calculate heart disease risk score based on multiple factors
+   * Calculate heart disease risk score using combined Framingham and PREVENT models
+   * @param {Object} patientData - Patient health information
+   * @param {Boolean} includeComparison - Whether to include database comparison
+   * @returns {Object} Risk assessment with score, category, and justification
+   */
+  async calculateRisk(patientData, includeComparison = false) {
+    // Calculate using both models
+    const framinghamResult = framinghamRiskScore.calculate(patientData);
+    const preventResult = preventModel.calculate(patientData);
+
+    // Combine the results
+    let combinedRiskScore = 0;
+    let combinedRiskPercentage = 0;
+    const allFactors = [];
+
+    if (framinghamResult) {
+      combinedRiskPercentage += framinghamResult.riskPercentage;
+      allFactors.push(...framinghamResult.factors);
+    }
+
+    if (preventResult) {
+      combinedRiskPercentage += preventResult.risk10Year;
+      allFactors.push(...preventResult.factors);
+    }
+
+    // Average the two models if both are available
+    if (framinghamResult && preventResult) {
+      combinedRiskPercentage = (framinghamResult.riskPercentage + preventResult.risk10Year) / 2;
+    } else if (framinghamResult) {
+      combinedRiskPercentage = framinghamResult.riskPercentage;
+    } else if (preventResult) {
+      combinedRiskPercentage = preventResult.risk10Year;
+    }
+
+    // Convert percentage to a 0-100 score for display
+    combinedRiskScore = Math.min(100, combinedRiskPercentage * 2);
+
+    // Get database comparison if requested
+    let databaseComparisonResult = null;
+    if (includeComparison) {
+      try {
+        const dbStats = await databaseComparison.getDatabaseStatistics();
+        databaseComparisonResult = databaseComparison.compare(patientData, dbStats);
+      } catch (error) {
+        console.error('Error getting database comparison:', error);
+      }
+    }
+
+    // Categorize risk based on combined percentage
+    let category, categoryDescription;
+    if (combinedRiskPercentage >= 20) {
+      category = 'high';
+      categoryDescription = 'High Risk';
+    } else if (combinedRiskPercentage >= 10) {
+      category = 'moderate';
+      categoryDescription = 'Moderate Risk';
+    } else if (combinedRiskPercentage >= 5) {
+      category = 'low-moderate';
+      categoryDescription = 'Low-Moderate Risk';
+    } else {
+      category = 'low';
+      categoryDescription = 'Low Risk';
+    }
+
+    return {
+      riskScore: Math.round(combinedRiskScore),
+      riskPercentage: Math.round(combinedRiskPercentage * 10) / 10,
+      category,
+      categoryDescription,
+      factors: allFactors,
+      models: {
+        framingham: framinghamResult,
+        prevent: preventResult
+      },
+      databaseComparison: databaseComparisonResult,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Legacy method for backward compatibility
    * @param {Object} patientData - Patient health information
    * @returns {Object} Risk assessment with score, category, and justification
    */
-  calculateRisk(patientData) {
+  calculateRiskSync(patientData) {
     const {
       age,
       gender,

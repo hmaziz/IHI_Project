@@ -62,16 +62,101 @@ const RiskResults = ({ riskAssessment, recommendations, patientData, onBack }) =
             {riskAssessment.categoryDescription}
           </h2>
           <div className="risk-score">
-            <span className="score-value">{riskAssessment.riskScore}</span>
-            <span className="score-label">Risk Score</span>
+            <span className="score-value">{riskAssessment.riskPercentage || riskAssessment.riskScore}%</span>
+            <span className="score-label">10-Year Risk</span>
           </div>
           <p className="risk-description">
-            Based on your health information, your risk for developing heart disease is classified as{' '}
+            Based on combined Framingham Risk Score and AHA PREVENT model analysis, your 10-year risk for developing heart disease is{' '}
+            <strong style={{ color: getRiskColor(riskAssessment.category) }}>
+              {riskAssessment.riskPercentage || riskAssessment.riskScore}%
+            </strong>, classified as{' '}
             <strong style={{ color: getRiskColor(riskAssessment.category) }}>
               {riskAssessment.categoryDescription}
             </strong>.
           </p>
         </div>
+
+        {/* Model Comparison */}
+        {riskAssessment.models && (
+          <div className="models-card">
+            <h3>Risk Model Analysis</h3>
+            <div className="models-grid">
+              {riskAssessment.models.framingham && (
+                <div className="model-item">
+                  <h4>Framingham Risk Score</h4>
+                  <div className="model-risk">
+                    <span className="model-percentage">
+                      {riskAssessment.models.framingham.riskPercentage}%
+                    </span>
+                    <span className="model-label">10-Year Risk</span>
+                  </div>
+                  <p className="model-description">
+                    Based on the Framingham Heart Study prediction model
+                  </p>
+                </div>
+              )}
+              {riskAssessment.models.prevent && (
+                <div className="model-item">
+                  <h4>AHA PREVENT Model</h4>
+                  <div className="model-risk">
+                    <span className="model-percentage">
+                      {riskAssessment.models.prevent.risk10Year}%
+                    </span>
+                    <span className="model-label">10-Year Risk</span>
+                  </div>
+                  {riskAssessment.models.prevent.risk30Year && (
+                    <div className="model-risk-secondary">
+                      <span>{riskAssessment.models.prevent.risk30Year}%</span>
+                      <span>30-Year Risk</span>
+                    </div>
+                  )}
+                  <p className="model-description">
+                    Based on the American Heart Association PREVENT equations
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Database Comparison */}
+        {riskAssessment.databaseComparison && riskAssessment.databaseComparison.insights && riskAssessment.databaseComparison.insights.length > 0 && (
+          <div className="comparison-card">
+            <h3>📊 Comparison with Database Averages</h3>
+            <p className="comparison-intro">
+              Your health metrics compared to the Synthea database population:
+              {riskAssessment.databaseComparison.databaseSampleSize > 0 && (
+                <span className="sample-size">
+                  {' '}(Based on {riskAssessment.databaseComparison.databaseSampleSize} records)
+                </span>
+              )}
+            </p>
+            <div className="comparison-insights">
+              {riskAssessment.databaseComparison.insights.map((insight, index) => (
+                <div key={index} className="insight-item">
+                  <div className="insight-header">
+                    <h4>{insight.metric}</h4>
+                    <span className={`insight-status ${insight.recommendation.includes('well-controlled') || insight.recommendation.includes('excellent') || insight.recommendation.includes('favorable') ? 'positive' : 'attention'}`}>
+                      {insight.recommendation.includes('well-controlled') || insight.recommendation.includes('excellent') || insight.recommendation.includes('favorable') ? '✓' : '⚠'}
+                    </span>
+                  </div>
+                  <div className="insight-comparison">
+                    <div className="comparison-value">
+                      <span className="label">Your Value:</span>
+                      <span className="value patient">{insight.patient}</span>
+                    </div>
+                    <div className="comparison-value">
+                      <span className="label">Database Average:</span>
+                      <span className="value average">{insight.average}</span>
+                    </div>
+                  </div>
+                  <p className="insight-text">{insight.insight}</p>
+                  <p className="insight-recommendation">{insight.recommendation}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Risk Factors */}
         {riskAssessment.factors && riskAssessment.factors.length > 0 && (

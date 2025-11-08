@@ -8,7 +8,11 @@ const PatientSummary = ({ patientData, onCalculateRisk, onBack }) => {
   const handleCalculateRisk = async () => {
     setIsCalculating(true);
     try {
-      const response = await axios.post('/api/risk-assessment/calculate', patientData);
+      // Include database comparison in the request
+      const response = await axios.post('/api/risk-assessment/calculate', {
+        ...patientData,
+        includeComparison: true
+      });
       
       if (response.data.success) {
         onCalculateRisk(response.data.riskAssessment, response.data.recommendations);
