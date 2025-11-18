@@ -64,11 +64,26 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
         setCollectedData(response.data.collectedData);
       }
 
-      // If risk assessment is ready, show results
+      // If user confirmed and risk assessment is ready, show results
+      // Otherwise, if we have enough data, show summary first
       if (response.data.riskAssessment && response.data.recommendations) {
+        // User confirmed calculation - go straight to results
         setTimeout(() => {
+          // Make sure collectedData is passed to risk results
           onRiskCalculated(response.data.riskAssessment, response.data.recommendations);
         }, 2000);
+      } else if (response.data.hasEnoughData && response.data.collectedData && 
+                 Object.keys(response.data.collectedData).length >= 3) {
+        // We have enough data but haven't calculated yet - show summary
+        // Check if this is the confirmation prompt
+        const isConfirmationPrompt = response.data.response && 
+          response.data.response.includes('Would you like me to proceed');
+        if (isConfirmationPrompt) {
+          // Show summary before calculating
+          setTimeout(() => {
+            onDataCollected(response.data.collectedData);
+          }, 1000);
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error);

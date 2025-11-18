@@ -12,6 +12,8 @@ router.post('/calculate', async (req, res) => {
     const patientData = req.body;
     // Always include database comparison by default (can be disabled with includeComparison=false)
     const includeComparison = req.body.includeComparison !== false;
+    // Allow overriding Sarah0022 model usage (default: use if enabled)
+    const useSarahModel = req.body.useSarahModel !== undefined ? req.body.useSarahModel : null;
 
     // Validate required fields
     const requiredFields = ['age', 'gender'];
@@ -24,8 +26,8 @@ router.post('/calculate', async (req, res) => {
       });
     }
 
-    // Calculate risk using combined models with database comparison
-    const riskAssessment = await riskCalculator.calculateRisk(patientData, includeComparison);
+    // Calculate risk using combined models (Framingham, PREVENT, and optionally Sarah0022/heart-disease-model)
+    const riskAssessment = await riskCalculator.calculateRisk(patientData, includeComparison, useSarahModel);
     
     // Generate recommendations
     const recommendations = riskCalculator.generateRecommendations(riskAssessment, patientData);

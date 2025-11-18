@@ -7,41 +7,82 @@
 const framinghamRiskScore = require('./framinghamRiskScore');
 const preventModel = require('./preventModel');
 const databaseComparison = require('./databaseComparison');
+const HeartDiseaseModel = require('./heartDiseaseModel');
 
 class RiskCalculator {
+  constructor() {
+    // Initialize heart disease model if API key is available
+    const apiKey = process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN;
+    this.heartDiseaseModel = null;
+    if (apiKey && apiKey !== 'your_huggingface_api_key_here') {
+      try {
+        this.heartDiseaseModel = new HeartDiseaseModel(apiKey);
+      } catch (error) {
+        console.warn('Could not initialize Sarah0022 heart disease model:', error.message);
+      }
+    }
+    this.useHeartDiseaseModel = process.env.USE_HEART_DISEASE_MODEL !== 'false'; // Default to true
+  }
+
   /**
-   * Calculate heart disease risk score using combined Framingham and PREVENT models
+   * Calculate heart disease risk score using combined models
    * @param {Object} patientData - Patient health information
    * @param {Boolean} includeComparison - Whether to include database comparison
+   * @param {Boolean} useSarahModel - Whether to use Sarah0022/heart-disease-model (default: true if enabled)
    * @returns {Object} Risk assessment with score, category, and justification
    */
-  async calculateRisk(patientData, includeComparison = false) {
-    // Calculate using both models
+  async calculateRisk(patientData, includeComparison = false, useSarahModel = null) {
+    // Calculate using traditional models
     const framinghamResult = framinghamRiskScore.calculate(patientData);
     const preventResult = preventModel.calculate(patientData);
+    
+    // Calculate using Sarah0022 model if enabled and available
+    let sarahResult = null;
+    const shouldUseSarah = useSarahModel !== null ? useSarahModel : (this.useHeartDiseaseModel && this.heartDiseaseModel);
+    
+    if (shouldUseSarah && this.heartDiseaseModel) {
+      try {
+        sarahResult = await this.heartDiseaseModel.getRiskAssessment(patientData);
+        console.log('✓ Sarah0022/heart-disease-model prediction received');
+      } catch (error) {
+        console.warn('Sarah0022 model prediction failed, using traditional models only:', error.message);
+        // Continue with other models even if Sarah model fails
+      }
+    }
 
-    // Combine the results
+    // Combine the results from all models
     let combinedRiskScore = 0;
     let combinedRiskPercentage = 0;
     const allFactors = [];
+    const modelCount = [framinghamResult, preventResult, sarahResult].filter(r => r !== null).length;
 
     if (framinghamResult) {
-      combinedRiskPercentage += framinghamResult.riskPercentage;
       allFactors.push(...framinghamResult.factors);
     }
 
     if (preventResult) {
-      combinedRiskPercentage += preventResult.risk10Year;
       allFactors.push(...preventResult.factors);
     }
 
-    // Average the two models if both are available
-    if (framinghamResult && preventResult) {
-      combinedRiskPercentage = (framinghamResult.riskPercentage + preventResult.risk10Year) / 2;
-    } else if (framinghamResult) {
-      combinedRiskPercentage = framinghamResult.riskPercentage;
-    } else if (preventResult) {
-      combinedRiskPercentage = preventResult.risk10Year;
+    if (sarahResult) {
+      allFactors.push(...sarahResult.factors);
+    }
+
+    // Combine risk percentages from all available models
+    const riskPercentages = [];
+    if (framinghamResult) {
+      riskPercentages.push(framinghamResult.riskPercentage);
+    }
+    if (preventResult) {
+      riskPercentages.push(preventResult.risk10Year);
+    }
+    if (sarahResult) {
+      riskPercentages.push(sarahResult.riskPercentage);
+    }
+
+    // Average all available models
+    if (riskPercentages.length > 0) {
+      combinedRiskPercentage = riskPercentages.reduce((sum, val) => sum + val, 0) / riskPercentages.length;
     }
 
     // Convert percentage to a 0-100 score for display
@@ -74,18 +115,26 @@ class RiskCalculator {
       categoryDescription = 'Low Risk';
     }
 
+    const models = {
+      framingham: framinghamResult,
+      prevent: preventResult
+    };
+    
+    // Add Sarah0022 model result if available
+    if (sarahResult) {
+      models.sarah0022 = sarahResult.models?.sarah0022 || sarahResult;
+    }
+
     return {
       riskScore: Math.round(combinedRiskScore),
       riskPercentage: Math.round(combinedRiskPercentage * 10) / 10,
       category,
       categoryDescription,
       factors: allFactors,
-      models: {
-        framingham: framinghamResult,
-        prevent: preventResult
-      },
+      models: models,
       databaseComparison: databaseComparisonResult,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      modelCount: modelCount // Number of models used in calculation
     };
   }
 
@@ -357,5 +406,7 @@ class RiskCalculator {
   }
 }
 
-module.exports = new RiskCalculator();
+// Export singleton instance
+const riskCalculator = new RiskCalculator();
+module.exports = riskCalculator;
 
