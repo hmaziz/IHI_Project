@@ -9,6 +9,7 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
   const [sessionId, setSessionId] = useState(null);
   const [collectedData, setCollectedData] = useState({});
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
     // Initialize chatbot session
@@ -17,7 +18,11 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+    // Focus input after messages update (when assistant responds)
+    if (!isLoading && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [messages, isLoading]);
 
   const initializeChatbot = async () => {
     try {
@@ -48,6 +53,11 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
     setInputMessage('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
+    
+    // Focus input immediately after clearing (before API call)
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
 
     try {
       const response = await axios.post('/api/chatbot/message', {
@@ -65,21 +75,19 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
       }
 
       // If user confirmed and risk assessment is ready, show results
-      // Otherwise, if we have enough data, show summary first
       if (response.data.riskAssessment && response.data.recommendations) {
         // User confirmed calculation - go straight to results
         setTimeout(() => {
           // Make sure collectedData is passed to risk results
           onRiskCalculated(response.data.riskAssessment, response.data.recommendations);
         }, 2000);
-      } else if (response.data.hasEnoughData && response.data.collectedData && 
-                 Object.keys(response.data.collectedData).length >= 3) {
-        // We have enough data but haven't calculated yet - show summary
-        // Check if this is the confirmation prompt
+      } else if (response.data.hasEnoughData && response.data.collectedData) {
+        // All questions have been asked - check if this is the confirmation prompt
         const isConfirmationPrompt = response.data.response && 
-          response.data.response.includes('Would you like me to proceed');
+          (response.data.response.includes('Would you like me to calculate') || 
+           response.data.response.includes('Would you like me to proceed'));
         if (isConfirmationPrompt) {
-          // Show summary before calculating
+          // All questions completed - show summary before calculating
           setTimeout(() => {
             onDataCollected(response.data.collectedData);
           }, 1000);
@@ -93,6 +101,10 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
       }]);
     } finally {
       setIsLoading(false);
+      // Focus input after response is processed
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
     }
   };
 
@@ -167,11 +179,13 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
 
       <form className="chatbot-input" onSubmit={handleSendMessage}>
         <input
+          ref={inputRef}
           type="text"
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           placeholder="Type your message here..."
           disabled={isLoading}
+          autoFocus
         />
         <button type="submit" disabled={isLoading || !inputMessage.trim()}>
           Send

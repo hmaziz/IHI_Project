@@ -20,6 +20,30 @@ app.use('/api/risk-assessment', riskAssessmentRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/fhir', fhirRoutes);
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Heart Disease Risk Assessment API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      chatbot: {
+        start: 'POST /api/chatbot/start',
+        message: 'POST /api/chatbot/message',
+        calculateRisk: 'POST /api/chatbot/calculate-risk'
+      },
+      riskAssessment: {
+        calculate: 'POST /api/risk-assessment/calculate',
+        health: 'GET /api/risk-assessment/health'
+      },
+      fhir: {
+        patient: 'GET/POST /api/fhir/patient/:id',
+        observation: 'POST /api/fhir/observation'
+      }
+    }
+  });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Heart Disease Risk Assessment API is running' });
