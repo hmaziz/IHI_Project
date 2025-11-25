@@ -1,0 +1,19 @@
+{
+  "name": "heart-disease-risk-app",
+  "version": "1.0.0",
+  "description": "Heart Disease Risk Assessment Application",
+  "private": true,
+  "scripts": {
+    "install-frontend": "cd frontend && npm install",
+    "install-backend": "cd backend && npm install",
+    "install-all": "npm run install-frontend && npm run install-backend",
+    "build": "cd frontend && npm run build"
+  },
+  "dependencies": {
+    "serverless-http": "^3.2.0"
+  },
+  "engines": {
+    "node": ">=18.x"
+  }
+}
+
