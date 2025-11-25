@@ -18,7 +18,8 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
 
   useEffect(() => {
     scrollToBottom();
-    // Focus input after messages update (when assistant responds)
+    // Always keep focus on input unless loading just finished,
+    // but we removed the disabled state so we can focus immediately/always
     if (!isLoading && inputRef.current) {
       inputRef.current.focus();
     }
@@ -53,11 +54,9 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
     setInputMessage('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
-    
-    // Focus input immediately after clearing (before API call)
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
+
+    // Keep focus on input
+    if (inputRef.current) inputRef.current.focus();
 
     try {
       const response = await axios.post('/api/chatbot/message', {
@@ -83,8 +82,8 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
         }, 2000);
       } else if (response.data.hasEnoughData && response.data.collectedData) {
         // All questions have been asked - check if this is the confirmation prompt
-        const isConfirmationPrompt = response.data.response && 
-          (response.data.response.includes('Would you like me to calculate') || 
+        const isConfirmationPrompt = response.data.response &&
+          (response.data.response.includes('Would you like me to calculate') ||
            response.data.response.includes('Would you like me to proceed'));
         if (isConfirmationPrompt) {
           // All questions completed - show summary before calculating
@@ -95,16 +94,26 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: 'I apologize, but I encountered an error. Please try again or use the questionnaire form instead.'
-      }]);
+
+      // Handle session expiration or server restart
+      if (error.response && error.response.status === 400 && error.response.data.error.includes('Session not found')) {
+         setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'Session expired. Starting a new assessment...'
+        }]);
+        setTimeout(() => initializeChatbot(), 1500);
+      } else {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: 'I apologize, but I encountered an error. Please try again.'
+        }]);
+      }
     } finally {
       setIsLoading(false);
-      // Focus input after response is processed
+      // Ensure focus returns to input
       setTimeout(() => {
         inputRef.current?.focus();
-      }, 100);
+      }, 10);
     }
   };
 
@@ -150,7 +159,7 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
           ← Back
         </button>
         <h2>Chat Assessment</h2>
-        <button 
+        <button
           className="btn-calculate"
           onClick={handleQuickCalculate}
           disabled={isLoading || Object.keys(collectedData).length < 2}
@@ -184,7 +193,6 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
           value={inputMessage}
           onChange={(e) => setInputMessage(e.target.value)}
           placeholder="Type your message here..."
-          disabled={isLoading}
           autoFocus
         />
         <button type="submit" disabled={isLoading || !inputMessage.trim()}>
@@ -196,4 +204,3 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
 };
 
 export default Chatbot;
-
