@@ -24,9 +24,13 @@ function App() {
     setCurrentView('summary');
   };
 
-  const handleRiskCalculated = (assessment, recs) => {
+  const handleRiskCalculated = (assessment, recs, patientDataFromChat = null) => {
     setRiskAssessment(assessment);
     setRecommendations(recs);
+    // If patientData is provided from chatbot, set it
+    if (patientDataFromChat && !patientData) {
+      setPatientData(patientDataFromChat);
+    }
     setCurrentView('results');
   };
 

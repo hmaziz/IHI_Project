@@ -9,7 +9,7 @@ const path = require('path');
 class SyntheaLoader {
   constructor() {
     this.dataCache = null;
-    this.statsCache = null;
+    this.statsCache = {}; // Object to cache statistics by gender
     this.dataDirectory = process.env.SYNTHEA_DATA_DIR || path.join(__dirname, '../../data/synthea');
   }
 
@@ -117,14 +117,33 @@ class SyntheaLoader {
 
   /**
    * Calculate statistics from Synthea data
+   * @param {String} gender - Optional gender filter ('male' or 'female')
    * @returns {Object} Statistics object with averages and medians
    */
-  calculateStatistics() {
-    if (this.statsCache) {
-      return this.statsCache;
+  calculateStatistics(gender = null) {
+    const cacheKey = gender || 'all';
+    if (this.statsCache && this.statsCache[cacheKey]) {
+      return this.statsCache[cacheKey];
     }
 
     const resources = this.loadSyntheaData();
+    
+    // Filter patients by gender if specified
+    let patients = resources.filter(r => r.resourceType === 'Patient');
+    if (gender) {
+      patients = patients.filter(patient => {
+        const patientGender = patient.gender?.toLowerCase();
+        return patientGender === gender.toLowerCase();
+      });
+    }
+    
+    // Create a map of patient IDs to gender for observation filtering
+    const patientGenderMap = new Map();
+    patients.forEach(patient => {
+      if (patient.id) {
+        patientGenderMap.set(patient.id, patient.gender?.toLowerCase());
+      }
+    });
     
     const stats = {
       systolicBP: { values: [], average: 0, median: 0, count: 0 },
@@ -136,7 +155,6 @@ class SyntheaLoader {
     };
 
     // Extract Patient resources for age calculation
-    const patients = resources.filter(r => r.resourceType === 'Patient');
     patients.forEach(patient => {
       if (patient.birthDate) {
         const age = this.calculateAge(patient.birthDate);
@@ -146,8 +164,18 @@ class SyntheaLoader {
       }
     });
 
-    // Extract Observation resources
-    const observations = resources.filter(r => r.resourceType === 'Observation');
+    // Extract Observation resources, filter by patient gender if specified
+    let observations = resources.filter(r => r.resourceType === 'Observation');
+    
+    if (gender && patientGenderMap.size > 0) {
+      observations = observations.filter(obs => {
+        const subjectRef = obs.subject?.reference || obs.subject?.id;
+        if (!subjectRef) return false;
+        // Extract patient ID from reference (format: "Patient/123" or just "123")
+        const patientId = subjectRef.includes('/') ? subjectRef.split('/')[1] : subjectRef;
+        return patientGenderMap.has(patientId);
+      });
+    }
     
     observations.forEach(obs => {
       if (!obs.code || !obs.code.coding) return;
@@ -234,8 +262,13 @@ class SyntheaLoader {
       }
     });
 
-    this.statsCache = stats;
-    console.log('Calculated Synthea statistics:', {
+    // Cache statistics by gender
+    if (!this.statsCache) {
+      this.statsCache = {};
+    }
+    this.statsCache[cacheKey] = stats;
+    
+    console.log(`Calculated Synthea statistics${gender ? ` for ${gender}` : ''}:`, {
       patients: patients.length,
       observations: observations.length,
       stats: Object.keys(stats).map(k => `${k}: ${stats[k].count} samples`)
@@ -290,7 +323,7 @@ class SyntheaLoader {
    */
   clearCache() {
     this.dataCache = null;
-    this.statsCache = null;
+    this.statsCache = {};
   }
 }
 

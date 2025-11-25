@@ -83,6 +83,7 @@
   border-radius: 18px;
   word-wrap: break-word;
   line-height: 1.5;
+  white-space: pre-wrap; /* Preserve whitespace and line breaks */
 }
 
 .message.user .message-content {
@@ -155,6 +156,25 @@
 .chatbot-input button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn-view-results {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-view-results:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
 }
 
 /* Responsive */

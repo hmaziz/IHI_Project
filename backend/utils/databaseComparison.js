@@ -12,12 +12,13 @@ class DatabaseComparison {
   /**
    * Get statistics from Synthea database
    * First tries to load from Synthea JSON files, then falls back to FHIR server
+   * @param {String} gender - Optional gender filter ('male' or 'female') for gender-specific comparisons
    * @returns {Object} Average statistics from the database
    */
-  async getDatabaseStatistics() {
+  async getDatabaseStatistics(gender = null) {
     try {
-      // First, try to load from Synthea JSON files
-      const syntheaStats = syntheaLoader.calculateStatistics();
+      // First, try to load from Synthea JSON files with gender filter
+      const syntheaStats = syntheaLoader.calculateStatistics(gender);
       
       // Check if we have actual data (not just defaults)
       const hasRealData = Object.keys(syntheaStats).some(key => 
@@ -25,8 +26,12 @@ class DatabaseComparison {
       );
 
       if (hasRealData) {
-        console.log('Using Synthea file-based statistics');
-        return this.formatStatistics(syntheaStats);
+        console.log(`Using Synthea file-based statistics${gender ? ` for ${gender}` : ''}`);
+        const formatted = this.formatStatistics(syntheaStats);
+        if (gender) {
+          formatted.gender = gender; // Add gender info to stats
+        }
+        return formatted;
       }
 
       // Fallback to FHIR server query (with timeout protection)

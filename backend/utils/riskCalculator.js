@@ -88,11 +88,12 @@ class RiskCalculator {
     // Convert percentage to a 0-100 score for display
     combinedRiskScore = Math.min(100, combinedRiskPercentage * 2);
 
-    // Get database comparison if requested
+    // Get database comparison if requested (with gender-specific filtering)
     let databaseComparisonResult = null;
     if (includeComparison) {
       try {
-        const dbStats = await databaseComparison.getDatabaseStatistics();
+        const gender = patientData.gender; // Get patient's gender for gender-specific comparison
+        const dbStats = await databaseComparison.getDatabaseStatistics(gender);
         databaseComparisonResult = databaseComparison.compare(patientData, dbStats);
       } catch (error) {
         console.error('Error getting database comparison:', error);
