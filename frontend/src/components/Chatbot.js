@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import apiClient from '../api/client';
 import './Chatbot.css';
 
 const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
@@ -28,7 +28,7 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
 
   const initializeChatbot = async () => {
     try {
-      const response = await axios.post('/api/chatbot/start');
+      const response = await apiClient.post('/chatbot/start');
       setSessionId(response.data.sessionId);
       setMessages([{
         role: 'assistant',
@@ -60,7 +60,7 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
     if (inputRef.current) inputRef.current.focus();
 
     try {
-      const response = await axios.post('/api/chatbot/message', {
+      const response = await apiClient.post('/chatbot/message', {
         message: userMessage,
         sessionId: sessionId || `session_${Date.now()}`,
         conversationHistory: messages
@@ -211,7 +211,7 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
 
     setIsLoading(true);
     try {
-      const response = await axios.post('/api/chatbot/calculate-risk', {
+      const response = await apiClient.post('/chatbot/calculate-risk', {
         patientData: collectedData
       });
 
