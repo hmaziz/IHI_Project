@@ -4,7 +4,7 @@ module.exports = function(app) {
   app.use(
     '/api',
     createProxyMiddleware({
-      target: 'http://localhost:5000',
+      target: 'https://ihi-project.onrender.com',
       changeOrigin: true,
       secure: false,
     })
