@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './App.css';
+import './services/appwrite';
 import Chatbot from './components/Chatbot';
 import PatientSummary from './components/PatientSummary';
 import RiskResults from './components/RiskResults';

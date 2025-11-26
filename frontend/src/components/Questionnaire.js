@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { executeFunction } from '../services/appwrite';
 import './Questionnaire.css';
 
 const Questionnaire = ({ onComplete, onBack }) => {
@@ -110,21 +110,14 @@ const Questionnaire = ({ onComplete, onBack }) => {
 
       // Store data in FHIR
       try {
-        const fhirResponse = await axios.post('/api/fhir/questionnaire', patientData);
-        if (fhirResponse.data.success) {
-          console.log('Questionnaire data stored in FHIR:', fhirResponse.data);
-          // Store FHIR patient ID if available
-          if (fhirResponse.data.results?.patientId) {
-            patientData.fhirPatientId = fhirResponse.data.results.patientId;
-          }
+        const result = await executeFunction('fhirQuestionnaire', patientData);
+        if (result && result.success) {
+          console.log('Questionnaire data stored in FHIR:', result);
+          if (result.results?.patientId) patientData.fhirPatientId = result.results.patientId;
         }
       } catch (fhirError) {
         console.error('Error storing data in FHIR:', fhirError);
-        // Continue with the flow even if FHIR storage fails
-        // You might want to show a warning to the user
-        if (fhirError.response) {
-          console.error('FHIR Error details:', fhirError.response.data);
-        }
+        if (fhirError.response) console.error('FHIR Error details:', fhirError.response.data);
       }
 
       onComplete(patientData);

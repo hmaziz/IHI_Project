@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import { executeFunction } from '../services/appwrite';
 import './Chatbot.css';
 
 const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
@@ -26,12 +26,10 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
 
   const initializeChatbot = async () => {
     try {
-      const response = await axios.post('/api/chatbot/start');
-      setSessionId(response.data.sessionId);
-      setMessages([{
-        role: 'assistant',
-        content: response.data.welcomeMessage
-      }]);
+      const result = await executeFunction('chatbotStart', {});
+      // Expected result shape: { sessionId, welcomeMessage }
+      setSessionId(result.sessionId);
+      setMessages([{ role: 'assistant', content: result.welcomeMessage }]);
     } catch (error) {
       console.error('Error initializing chatbot:', error);
       setMessages([{
@@ -60,37 +58,25 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
     }, 0);
 
     try {
-      const response = await axios.post('/api/chatbot/message', {
+      const result = await executeFunction('chatbotMessage', {
         message: userMessage,
         sessionId: sessionId || `session_${Date.now()}`,
         conversationHistory: messages
       });
 
-      const aiResponse = response.data.response;
+      const aiResponse = result.response;
       setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
 
-      // Update collected data
-      if (response.data.collectedData) {
-        setCollectedData(response.data.collectedData);
-      }
+      if (result.collectedData) setCollectedData(result.collectedData);
 
-      // If user confirmed and risk assessment is ready, show results
-      if (response.data.riskAssessment && response.data.recommendations) {
-        // User confirmed calculation - go straight to results
-        setTimeout(() => {
-          // Make sure collectedData is passed to risk results
-          onRiskCalculated(response.data.riskAssessment, response.data.recommendations);
-        }, 2000);
-      } else if (response.data.hasEnoughData && response.data.collectedData) {
-        // All questions have been asked - check if this is the confirmation prompt
-        const isConfirmationPrompt = response.data.response && 
-          (response.data.response.includes('Would you like me to calculate') || 
-           response.data.response.includes('Would you like me to proceed'));
+      if (result.riskAssessment && result.recommendations) {
+        setTimeout(() => onRiskCalculated(result.riskAssessment, result.recommendations), 2000);
+      } else if (result.hasEnoughData && result.collectedData) {
+        const isConfirmationPrompt = result.response && (
+          result.response.includes('Would you like me to calculate') || result.response.includes('Would you like me to proceed')
+        );
         if (isConfirmationPrompt) {
-          // All questions completed - show summary before calculating
-          setTimeout(() => {
-            onDataCollected(response.data.collectedData);
-          }, 1000);
+          setTimeout(() => onDataCollected(result.collectedData), 1000);
         }
       }
     } catch (error) {
@@ -116,14 +102,11 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
 
     setIsLoading(true);
     try {
-      const response = await axios.post('/api/chatbot/calculate-risk', {
-        patientData: collectedData
-      });
-
-      if (response.data && response.data.success) {
-        onRiskCalculated(response.data.riskAssessment, response.data.recommendations);
+      const result = await executeFunction('chatbotCalculateRisk', { patientData: collectedData });
+      if (result && result.success) {
+        onRiskCalculated(result.riskAssessment, result.recommendations);
       } else {
-        console.error('Unexpected response format:', response.data);
+        console.error('Unexpected response format:', result);
         alert('Failed to calculate risk. Unexpected response from server.');
       }
     } catch (error) {
@@ -133,7 +116,7 @@ const Chatbot = ({ onDataCollected, onRiskCalculated, onBack }) => {
         alert(`Failed to calculate risk: ${error.response.data?.message || error.response.data?.error || 'Server error'}`);
       } else if (error.request) {
         console.error('No response received:', error.request);
-        alert('Failed to calculate risk. Please make sure the backend server is running on port 5000.');
+        alert('Failed to calculate risk. Please make sure Appwrite Functions are configured and reachable.');
       } else {
         console.error('Error setting up request:', error.message);
         alert(`Failed to calculate risk: ${error.message}`);

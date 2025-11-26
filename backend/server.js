@@ -2,10 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 require('dotenv').config();
+// Require Appwrite helper (runs a ping at startup)
+require('./utils/appwrite');
 
 const riskAssessmentRoutes = require('./routes/riskAssessment');
 const chatbotRoutes = require('./routes/chatbot');
 const fhirRoutes = require('./routes/fhir');
+const appwriteExampleRoutes = require('./routes/appwriteExample');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -19,6 +22,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/risk-assessment', riskAssessmentRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 app.use('/api/fhir', fhirRoutes);
+app.use('/api/appwrite', appwriteExampleRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

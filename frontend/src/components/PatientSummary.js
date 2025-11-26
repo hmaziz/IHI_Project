@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { executeFunction } from '../services/appwrite';
 import './PatientSummary.css';
 
 const PatientSummary = ({ patientData, onCalculateRisk, onBack }) => {
@@ -9,15 +9,15 @@ const PatientSummary = ({ patientData, onCalculateRisk, onBack }) => {
     setIsCalculating(true);
     try {
       // Include database comparison in the request
-      const response = await axios.post('/api/risk-assessment/calculate', {
+      const result = await executeFunction('riskAssessmentCalculate', {
         ...patientData,
         includeComparison: true
       });
-      
-      if (response.data && response.data.success) {
-        onCalculateRisk(response.data.riskAssessment, response.data.recommendations);
+
+      if (result && result.success) {
+        onCalculateRisk(result.riskAssessment, result.recommendations);
       } else {
-        console.error('Unexpected response format:', response.data);
+        console.error('Unexpected response format:', result);
         alert('Failed to calculate risk. Unexpected response from server.');
       }
     } catch (error) {
