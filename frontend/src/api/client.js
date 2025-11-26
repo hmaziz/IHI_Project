@@ -1,8 +1,16 @@
 import axios from 'axios';
 
+// Determine API base URL based on environment
+const getBaseURL = () => {
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://ihi-project.onrender.com/api';
+  }
+  return '/api';
+};
+
 // Create axios instance with default configuration
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: getBaseURL(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
