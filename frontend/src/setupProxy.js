@@ -7,6 +7,12 @@ module.exports = function(app) {
       target: 'https://ihi-project.onrender.com',
       changeOrigin: true,
       secure: false,
+      pathRewrite: {
+        '^/api': '/api'
+      },
+      headers: {
+        'Connection': 'keep-alive'
+      }
     })
   );
 };

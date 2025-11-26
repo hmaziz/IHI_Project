@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import apiClient from '../api/client';
 import './PatientSummary.css';
 
 const PatientSummary = ({ patientData, onCalculateRisk, onBack }) => {
@@ -9,7 +9,7 @@ const PatientSummary = ({ patientData, onCalculateRisk, onBack }) => {
     setIsCalculating(true);
     try {
       // Include database comparison in the request
-      const response = await axios.post('/api/risk-assessment/calculate', {
+      const response = await apiClient.post('/risk-assessment/calculate', {
         ...patientData,
         includeComparison: true
       });
