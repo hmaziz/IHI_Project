@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Build outputs
+frontend/build/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Test files
+**/tests/
+**/*.test.js
+**/*.spec.js
+
+# Documentation (optional - you may want to keep these)
+*.md
+!README.md
+
+# Data files
+backend/data/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
